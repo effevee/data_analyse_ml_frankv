@@ -1,0 +1,5 @@
+<div class="price--EotcN" data-qa="price2-itemPage_Desktop">€682</div>
+<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_carat_value-diamond_information-productDetailsTab">0.54</div>
+<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="depth_value-productDetailsTab">65.6</div>
+<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_lw_value-productDetailsTab">5.39x3.99x2.62</div>
+<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="tableSize_value-diamond_information-productDetailsTab">66.0</div>
