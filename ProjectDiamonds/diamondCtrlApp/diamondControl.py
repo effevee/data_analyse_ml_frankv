@@ -40,8 +40,8 @@ def closePopUpsDivs(selDriver):
         elem = selDriver.find_element(By.CSS_SELECTOR,'#onetrust-close-btn-container > button')
         elem.click()
         # sluit reclame popup
-        elem = selDriver.find_element(By.CSS_SELECTOR,'#body1 > div.ECModalstyle__Modal-sc-n33mnt-1.'
-           +'eoVpV.InspirationTrafficPopupstyles__ECModalStyled-sc-8kybsb-0.bQPIn > button')
+        elem = selDriver.find_element(By.CSS_SELECTOR,'#body1 > div.ECModalstyle__Modal-sc-n33mnt-1' + 
+                '.dpWiHq.InspirationTrafficPopupstyles__ECModalStyled-sc-8kybsb-0.fbtFrg > button')
         elem.click()
         return True
     except:
@@ -49,16 +49,25 @@ def closePopUpsDivs(selDriver):
     
 # waarde feature uit de broncode string filteren
 def getElemByDiv(html_str,div_name):
-    ib = html_str.index(div_name)+len(div_name)
-    ie = html_str.index('</div>',ib)
-    return html_str[ib:ie]
+    if div_name in html_str:
+        ib = html_str.index(div_name)+len(div_name)   # begin index van data
+        ie = html_str.index('</div>',ib)              # einde index van data
+        return html_str[ib:ie]
+    else:
+        return None
 
 # gegevens ophalen van een diamant
 def getDiamondData(idx,selDriver):
     selDriver.implicitly_wait(4)
+    if idx == 4: # prutsen
+        idx+=1
     diamond = '/html/body/div[1]/div[3]/div/div/div[1]/div/div[2]/div[2]/div[3]/div/div[@@]/div/div[2]/a/div/div/div/div[5]'.replace('@@',str(idx))
-    elem = selDriver.find_element(By.XPATH,diamond)
-    elem.click()
+    try:
+        elem = selDriver.find_element(By.XPATH,diamond)
+        elem.click()
+    except:
+        print('diamant niet gevonden (id:',idx,')')
+        return 0,0,0,0,0,False
     selDriver.implicitly_wait(4)
     # broncode van webpagina opslaan
     with codecs.open('file_'+str(idx),'w','utf-8') as f:
@@ -71,40 +80,43 @@ def getDiamondData(idx,selDriver):
     depth = 0
     price = '€0'
     num_found = 0
-    # opgeslagen broncode lijn per lijn overlopen
+    # opgeslagen broncode bestand openen
     with codecs.open('file_'+str(idx),'r','utf-8') as f:
+        # lijn per lijn overlopen
         for l in f:
             # price
-            if '<div class="price--EotcN" data-qa="price2-itemPage_Desktop">' in l:
-                price = getElemByDiv(l,'<div class="price--EotcN" data-qa="price2-itemPage_Desktop">')
-                print(price)
+            res = getElemByDiv(l,'<div class="price--EotcN" data-qa="price2-itemPage_Desktop">')
+            if res is not None:
+                price = res
                 num_found+=1
             # carat
-            if '<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_carat_value-diamond_information-productDetailsTab">' in l:
-                carat = float(getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_carat_value-diamond_information-productDetailsTab">'))
-                print(carat)
+            res = getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_carat_value-diamond_information-productDetailsTab">')
+            if res is not None:
+                carat = float(res)
                 num_found+=1
             # table
-            if '<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="tableSize_value-diamond_information-productDetailsTab">' in l:
-                table = float(getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="tableSize_value-diamond_information-productDetailsTab">'))
-                print(table)
+            res = getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="tableSize_value-diamond_information-productDetailsTab">')
+            if res is not None:
+                table = float(res)
                 num_found+=1
             # depth
-            if '<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="depth_value-productDetailsTab">' in l:
-                depth = float(getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="depth_value-productDetailsTab">'))
-                print(depth)
+            res = getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="depth_value-productDetailsTab">')
+            if res is not None:
+                depth = float(res)
                 num_found+=1
             # xyz
-            if '<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_lw_value-productDetailsTab">' in l:
-                xyz = getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_lw_value-productDetailsTab">')
-                print(xyz)
+            res = getElemByDiv(l,'<div role="cell" class="propertyRow--yeaVt propertyValueRow" data-qa="stone_lw_value-productDetailsTab">')
+            if res is not None:
+                xyz= res
                 num_found+=1
             # alles gevonden ?
             if num_found == 5:
                 break
     # opgeslagen broncode bestand verwijderen
     os.remove('file_'+str(idx))
-    return carat,xyz,table,depth,price
+    # debug
+    print(price,carat,table,depth,xyz)
+    return price,carat,table,depth,xyz,True
           
 # laden van model en dataPipeline
 model = joblib.load('model.sav')
@@ -215,25 +227,59 @@ while True:
             closePopUps(driver)
             closePopUpsDivs(driver)
             # ophalen data diamanten
-            carat,xyz,table,depth,price = getDiamondData(random.randint(1,10), driver)
-            # data toevoegen aan rij table_content
-            row = []
-            row.append(carat)
-            row.append(str(depth))
-            row.append(str(table))
-            xyz = xyz.split('x')
-            row+=xyz
-            row.append(price)
-            row.append('null') # placeholder voorspelde prijs
-            row.append('null') # placeholder verschil met verkoopprijs
-            table_content.append(row)
-            # gui updaten
-            window['RES_AUTO'].Update(table_content)
-            
+            price,carat,table,depth,xyz,status = getDiamondData(random.randint(1,5), driver)
+            if status == True:
+                # data toevoegen aan rij table_content
+                row = []
+                row.append(carat)
+                row.append(depth)
+                row.append(table)
+                xyz = xyz.split('x')
+                row+=xyz
+                row.append(price)
+                row.append('null') # placeholder voorspelde prijs
+                row.append('null') # placeholder verschil met verkoopprijs
+                table_content.append(row)
+                # gui updaten
+                window['RES_AUTO'].Update(table_content)
             # sluiten van de pagina
             driver.close()
-            
-    # TODO klik op Calculate knop 
-    #if event == 'Calculate':
- 
+    
+    # klik op Calculate samples knop             
+    if event == 'Calculate':
+        table2 = table_content.copy()
+        for i in range(len(table2)):
+            table2[i][6]=float(table2[i][6].replace('€',''))
+        table = np.array(table2)
+        # door de rijen lopen
+        # for row in range(len(table)):
+        #     # strings omzetten naar float
+        #     carat = float(table[row][0])  # waarde uit 1ste veld
+        #     depth = float(table[row][1])
+        #     table = float(table[row][2])
+        #     x = float(table[row][3])
+        #     y = float(table[row][4])
+        #     z = float(table[row][5])
+        #     sellersprice = float(table[row][6])
+        #     # dictionary maken van data
+        #     ddata = {'carat':[carat], 'depth':[depth], 'table':[table],
+        #               'x':[x], 'y':[y], 'z':[z], 'price':[sellersprice]}
+        #     # data in dataframe stoppen
+        #     df_data = pd.DataFrame.from_dict(ddata)
+        #     # door de dataPipeline sturen[]
+        #     X,y,_ = dPW.preprocess_targetTf(df_data, ['carat', 'y'], 'price',
+        #                             learnedProcess=dataPipeline)
+        #     # X transformeren naar X²
+        #     X = dPW.polyTrans(X, 2)
+        #     # voorspellen van de prijs
+        #     predict_price = model.predict(X)
+        #     # terug omzetten van de predict_price met 2**
+        #     predict_price = np.round(2**predict_price, 2)
+        #     # verschil tussen echte en voorspelde waarde
+        #     diff = predict_price - sellersprice
+        #     # tabel rij updaten
+        #     table[row][7] = str(predict_price)
+        #     table[row][8] = str(diff)
+        #     print(table[row])
+    
 window.close()
