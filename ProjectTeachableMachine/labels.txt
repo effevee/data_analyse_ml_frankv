@@ -1,0 +1,4 @@
+0 DOWN
+1 UP
+2 MIDDEL
+3 NONE

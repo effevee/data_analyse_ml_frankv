@@ -134,7 +134,7 @@ tab_manual_layout =  [[sg.T('carat:'),sg.In(),
                        sg.T(key='RES_MANUAL')]] 
 
 # tabel hoofing
-table_header = ['carat', 'depth', 'table', '  x ', '  y ', '  z ', 'sellersprice', 'price', 'diff']
+table_header = ['carat', 'depth', 'table', '  x ', '  y ', '  z ', 'sellersprice', ' price ', ' diff ']
 
 # tabel inhoud
 table_content = []
@@ -165,7 +165,7 @@ layout = [[sg.TabGroup([[sg.Tab('Manual', tab_manual_layout),
            expand_x=True, expand_y=True)]]
 
 # Create the Window
-window = sg.Window('Diamond Price Control', layout, default_element_size=(12,1), size=(600,280))
+window = sg.Window('Diamond Price Control', layout, default_element_size=(12,1), size=(640,280))
 # Event Loop to process "events"
 while True:             
     event, values = window.read()
@@ -247,39 +247,40 @@ while True:
     
     # klik op Calculate samples knop             
     if event == 'Calculate':
+        # kopie maken van display tabel
         table2 = table_content.copy()
-        for i in range(len(table2)):
-            table2[i][6]=float(table2[i][6].replace('€',''))
+        # numpy array maken van tabel
         table = np.array(table2)
-        # door de rijen lopen
-        # for row in range(len(table)):
-        #     # strings omzetten naar float
-        #     carat = float(table[row][0])  # waarde uit 1ste veld
-        #     depth = float(table[row][1])
-        #     table = float(table[row][2])
-        #     x = float(table[row][3])
-        #     y = float(table[row][4])
-        #     z = float(table[row][5])
-        #     sellersprice = float(table[row][6])
-        #     # dictionary maken van data
-        #     ddata = {'carat':[carat], 'depth':[depth], 'table':[table],
-        #               'x':[x], 'y':[y], 'z':[z], 'price':[sellersprice]}
-        #     # data in dataframe stoppen
-        #     df_data = pd.DataFrame.from_dict(ddata)
-        #     # door de dataPipeline sturen[]
-        #     X,y,_ = dPW.preprocess_targetTf(df_data, ['carat', 'y'], 'price',
-        #                             learnedProcess=dataPipeline)
-        #     # X transformeren naar X²
-        #     X = dPW.polyTrans(X, 2)
-        #     # voorspellen van de prijs
-        #     predict_price = model.predict(X)
-        #     # terug omzetten van de predict_price met 2**
-        #     predict_price = np.round(2**predict_price, 2)
-        #     # verschil tussen echte en voorspelde waarde
-        #     diff = predict_price - sellersprice
-        #     # tabel rij updaten
-        #     table[row][7] = str(predict_price)
-        #     table[row][8] = str(diff)
-        #     print(table[row])
-    
+        # data dictionary maken van de kolommen van de array
+        ddata = {'carat':table[:,0],'depth':table[:,1],'table':table[:,2],
+                 'x':table[:,3],'y':table[:,4],'z':table[:,5],'price':table[:,6]}
+        # dataframe maken van de data dictionary
+        df_data = pd.DataFrame.from_dict(ddata)
+        #print(df_data)
+        # wegwerken € en , teken
+        df_data = df_data.replace(regex=["€",","],value=["",""])
+        # strings omzetten naar floats
+        df_data = df_data.astype('float')
+        # controleren of de conversie gelukt is
+        print(df_data.info())
+        # dataframe door de DataPipeLine sturen
+        X,y,_ = dPW.preprocess_targetTf(df_data, ['carat', 'y'], 'price',
+                                learnedProcess=dataPipeline)
+        # X transformeren naar X²
+        X = dPW.polyTrans(X, 2)
+        # voorspellen van de prijs
+        predict_price = model.predict(X)
+        # terug omzetten van de predict_price met 2**
+        predict_price = np.round(2**predict_price, 2)
+        # verschil tussen echte en voorspelde waarde
+        diff = predict_price - df_data.price
+        print(predict_price, diff)
+        # resultaten in display tabel
+        diff = list(diff)
+        for j in range(len(predict_price)):
+            table_content[j][7] = "€"+str(predict_price[j])
+            table_content[j][8] = diff[j]
+        window['RES_AUTO'].Update(table_content)
+        
+     
 window.close()
